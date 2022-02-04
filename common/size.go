@@ -1,6 +1,6 @@
 package common
 
 type Size struct {
-	width  float64
-	height float64
+	Width  float64
+	Height float64
 }

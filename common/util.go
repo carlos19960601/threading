@@ -16,3 +16,7 @@ func Rotate(p Point, angle float64) Point {
 		y: p.x*sinAngle + p.y*cosAngle,
 	}
 }
+
+func Mix(a, b, x float64) float64 {
+	return a*(1-x) + b*x
+}

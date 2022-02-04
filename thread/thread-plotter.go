@@ -5,10 +5,10 @@ import "github.com/zengqiang96/threading/plotter"
 type ThreadPlotter struct {
 	segmentDrawnNumber int
 	Plotter            plotter.Plotter
-	ThreadComputer     ThreadComputer
+	ThreadComputer     *ThreadComputer
 }
 
-func NewThreadPlotter(p plotter.Plotter, computer ThreadComputer) *ThreadPlotter {
+func NewThreadPlotter(p plotter.Plotter, computer *ThreadComputer) *ThreadPlotter {
 	return &ThreadPlotter{
 		Plotter:        p,
 		ThreadComputer: computer,

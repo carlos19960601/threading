@@ -10,6 +10,7 @@ type Thread2Grow struct {
 }
 
 type Thread interface {
+	adjustCanvasData(data []uint8)
 	GetTotalSegmentNumber() int
 	GetThread2Grow() Thread2Grow
 }

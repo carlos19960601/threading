@@ -6,6 +6,7 @@ type PlotterSVG struct {
 	hasBlur bool
 }
 
+
 func (ps *PlotterSVG) DrawLines(lines []common.Line, color EColor, opacity float64, thickness int) {
 
 }
