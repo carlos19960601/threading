@@ -32,3 +32,11 @@ func (tm *ThreadMonochrome) adjustCanvasData(data []uint8) {
 		data[4*i+2] = adjustedValue
 	}
 }
+
+func (tm *ThreadMonochrome) EnableSamplingFor(color plotter.EColor) {
+
+}
+
+func (tm *ThreadMonochrome) SampleCanvas(data []uint8, index int) uint8 {
+	return data[index+0] // only check the red channel because the hidden canvas is in black and white
+}

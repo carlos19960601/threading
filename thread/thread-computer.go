@@ -149,10 +149,29 @@ func (tc *ThreadComputer) computeSegment(thread []Peg) {
 		if len(thread) > 20 {
 			prevousPegs = thread[len(thread)-20:]
 		}
-		nextPeg = computeBestNextPeg(lastPeg, prevousPegs)
+		nextPeg = tc.computeBestNextPeg(lastPeg, prevousPegs)
 	}
 
 	thread = append(thread, nextPeg)
+}
+
+func (tc *ThreadComputer) computeBestNextPeg(currentPeg Peg, pegsToAvoid []Peg) Peg {
+	candidates := make([]Peg, 0)
+	var bestScore float64 = MIN_SAFE_NUMBER
+
+	for _, peg := range tc.pegs {
+		if !tc.arePegsTooClose(currentPeg, peg) && !SliceContains(pegsToAvoid, peg) {
+			condidateScore := tc.computeSegmentPotential(currentPeg, peg)
+			if condidateScore > float64(bestScore) {
+				bestScore = condidateScore
+				candidates = []Peg{peg}
+			} else if condidateScore == float64(bestScore) {
+				candidates = append(candidates, peg)
+			}
+		}
+	}
+
+	return randomPeg(candidates)
 }
 
 func (tc *ThreadComputer) computeBestStartingSegment() Segment {
@@ -177,7 +196,7 @@ func (tc *ThreadComputer) computeBestStartingSegment() Segment {
 		}
 	}
 
-	return randomItem(candidates)
+	return randomSegment(candidates)
 }
 
 func (tc *ThreadComputer) drawThread(p plotter.Plotter, segmentsToIgnoreNumber int) {
@@ -245,7 +264,7 @@ func (tc *ThreadComputer) computePegs() []Peg {
 }
 
 func (tc *ThreadComputer) computeSegmentPotential(peg1, peg2 Peg) float64 {
-	potential := 0
+	var potential float64 = 0
 
 	segmentLength := common.Distance(common.Point{
 		X: peg1.GetX(),
@@ -274,10 +293,42 @@ func (tc *ThreadComputer) computeSegmentPotential(peg1, peg2 Peg) float64 {
 }
 
 func (tc *ThreadComputer) sampleCanvasData(coords common.Point) float64 {
+	width := tc.hiddenCanvasData.Bounds().Size().X
+	height := tc.hiddenCanvasData.Bounds().Size().Y
 
+	minX := clamp(int(math.Floor(coords.X)), 0, width-1)
+	maxX := clamp(int(math.Ceil(coords.X)), 0, width-1)
+	minY := clamp(int(math.Floor(coords.Y)), 0, height-1)
+	maxY := clamp(int(math.Ceil(coords.Y)), 0, height-1)
+
+	topLeft := tc.sampleCanvasPixel(minX, minY)
+	topRight := tc.sampleCanvasPixel(maxX, minY)
+	bottomLeft := tc.sampleCanvasPixel(minX, maxY)
+	bottomRight := tc.sampleCanvasPixel(maxX, maxY)
+
+	fractX := math.Mod(coords.X, 1)
+	top := common.Mix(float64(topLeft), float64(topRight), fractX)
+	bottom := common.Mix(float64(bottomLeft), float64(bottomRight), fractX)
+
+	fractY := math.Mod(coords.Y, 1)
+	return common.Mix(top, bottom, fractY)
 }
 
-func randomItem(candidates []Segment) Segment {
+func (tc *ThreadComputer) sampleCanvasPixel(pixelX, pixelY int) uint8 {
+	index := 4 * (pixelX + pixelY*tc.hiddenCanvasData.Rect.Dx())
+	return tc.thread.SampleCanvas(tc.hiddenCanvasData.Pix, index)
+}
+
+func randomSegment(candidates []Segment) Segment {
+	if len(candidates) == 0 {
+		return Segment{}
+	}
+
+	randomIndex := fastrand.Uint32n(uint32(len(candidates)))
+	return candidates[int(randomIndex)]
+}
+
+func randomPeg(candidates []Peg) Peg {
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -296,4 +347,14 @@ func computeBestSize(sourceImage image.Image, maxSize int) common.Size {
 		Width:  math.Ceil(float64(sourceImage.Bounds().Size().X) * sizingFactor),
 		Height: math.Ceil(float64(sourceImage.Bounds().Size().Y) * sizingFactor),
 	}
+}
+
+func clamp(x, min, max int) int {
+	if x < min {
+		return min
+	} else if x > max {
+		return max
+	}
+
+	return x
 }

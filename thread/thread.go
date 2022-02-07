@@ -13,6 +13,8 @@ type Thread interface {
 	adjustCanvasData(data []uint8)
 	GetTotalSegmentNumber() int
 	GetThread2Grow() Thread2Grow
+	EnableSamplingFor(color plotter.EColor)
+	SampleCanvas(data []uint8, index int) uint8
 }
 
 type ThreadBase struct {
@@ -24,4 +26,14 @@ func (tb *ThreadBase) ComputeSegmentNumber(pegs []Peg) int {
 	}
 
 	return 0
+}
+
+func SliceContains(pegs []Peg, peg Peg) bool {
+	for _, p := range pegs {
+		if p == peg {
+			return true
+		}
+	}
+
+	return false
 }

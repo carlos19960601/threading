@@ -18,7 +18,7 @@ type Plotter interface {
 type PlotterBase struct {
 }
 
-func (pb *PlotterBase) drawBrokenLine(points []common.Point, color EColor, opacity float64, thickness int) {
+func (pb *PlotterBase) DrawBrokenLine(points []common.Point, color EColor, opacity float64, thickness int) {
 	lines := make([]common.Line, 0)
 	for i := 0; i < len(points)-1; i++ {
 		lines = append(lines, common.Line{

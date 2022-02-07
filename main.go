@@ -23,7 +23,7 @@ func main() {
 		log.Fatalf("image decode failed, err: %v", err)
 	}
 
-	svgPlotter := plotter.PlotterSVG{}
+	svgPlotter := &plotter.PlotterSVG{}
 	threadComputer := thread.NewThreadComputer(sourceImage, common.Config{})
 	threadPlotter := thread.NewThreadPlotter(svgPlotter, threadComputer)
 
