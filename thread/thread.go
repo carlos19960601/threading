@@ -5,7 +5,7 @@ import (
 )
 
 type Thread2Grow struct {
-	thread []Peg
+	thread *[]Peg
 	color  plotter.EColor
 }
 

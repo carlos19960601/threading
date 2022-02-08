@@ -7,13 +7,19 @@ type ThreadMonochrome struct {
 	threadPegs []Peg
 }
 
+func NewThreadMonochrome() *ThreadMonochrome {
+	return &ThreadMonochrome{
+		threadPegs: make([]Peg, 0),
+	}
+}
+
 func (tm *ThreadMonochrome) GetTotalSegmentNumber() int {
 	return tm.ComputeSegmentNumber(tm.threadPegs)
 }
 
 func (tm *ThreadMonochrome) GetThread2Grow() Thread2Grow {
 	return Thread2Grow{
-		thread: tm.threadPegs,
+		thread: &tm.threadPegs,
 		color:  plotter.MONOCHROME,
 	}
 }

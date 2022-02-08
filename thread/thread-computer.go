@@ -5,12 +5,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/valyala/fastrand"
 	"github.com/zengqiang96/threading/common"
 	"github.com/zengqiang96/threading/plotter"
 
 	"github.com/tfriedel6/canvas"
 	"github.com/tfriedel6/canvas/backend/softwarebackend"
+	"github.com/valyala/fastrand"
 )
 
 const (
@@ -70,7 +70,9 @@ type ThreadComputer struct {
 
 func NewThreadComputer(sourceImage image.Image, config common.Config) *ThreadComputer {
 	tc := &ThreadComputer{
-		SourceImage: sourceImage,
+		SourceImage:       sourceImage,
+		Config:            config,
+		hiddenCanvasScale: config.Quality,
 	}
 
 	tc.reset(float64(16)/256, 1)
@@ -102,7 +104,6 @@ func (tc *ThreadComputer) resetHiddenCanvas() {
 
 func (tc *ThreadComputer) computeError() {
 	tc.uploadCanvasDataToCPU()
-
 }
 
 func (tc *ThreadComputer) uploadCanvasDataToCPU() {
@@ -136,23 +137,34 @@ func (tc *ThreadComputer) GetSegmentsNumber() int {
 	return tc.thread.GetTotalSegmentNumber()
 }
 
-func (tc *ThreadComputer) computeSegment(thread []Peg) {
+func (tc *ThreadComputer) computeSegment(thread *[]Peg) {
 	var lastPeg, nextPeg Peg
-	if len(thread) == 0 {
+	if len(*thread) == 0 {
 		startingSegment := tc.computeBestStartingSegment()
-		thread = append(thread, startingSegment.peg1)
+		*thread = append(*thread, startingSegment.peg1)
 		lastPeg = startingSegment.peg1
 		nextPeg = startingSegment.peg2
 	} else {
-		lastPeg = thread[len(thread)-1]
-		prevousPegs := thread
-		if len(thread) > 20 {
-			prevousPegs = thread[len(thread)-20:]
+		lastPeg = (*thread)[len(*thread)-1]
+		prevousPegs := *thread
+		if len(*thread) > 20 {
+			prevousPegs = (*thread)[len(*thread)-20:]
 		}
 		nextPeg = tc.computeBestNextPeg(lastPeg, prevousPegs)
 	}
 
-	thread = append(thread, nextPeg)
+	*thread = append(*thread, nextPeg)
+	tc.drawSegmentOnHiddenCanvas(lastPeg, nextPeg)
+}
+
+func (tc *ThreadComputer) drawSegmentOnHiddenCanvas(peg1, peg2 Peg) {
+	tc.hiddenCanvasContext.BeginPath()
+	tc.hiddenCanvasContext.MoveTo(peg1.GetX(), peg1.GetY())
+	tc.hiddenCanvasContext.LineTo(peg2.GetX(), peg2.GetY())
+	tc.hiddenCanvasContext.Stroke()
+	tc.hiddenCanvasContext.ClosePath()
+	// invalidate CPU data
+	tc.hiddenCanvasData = nil
 }
 
 func (tc *ThreadComputer) computeBestNextPeg(currentPeg Peg, pegsToAvoid []Peg) Peg {
@@ -204,8 +216,8 @@ func (tc *ThreadComputer) drawThread(p plotter.Plotter, segmentsToIgnoreNumber i
 }
 
 func (tc *ThreadComputer) computePegs() []Peg {
-	width := tc.SourceImage.Bounds().Size().X
-	height := tc.SourceImage.Bounds().Size().Y
+	width := tc.hiddenCanvasContext.Width()
+	height := tc.hiddenCanvasContext.Height()
 
 	defaultSize := 1000
 
@@ -256,14 +268,15 @@ func (tc *ThreadComputer) computePegs() []Peg {
 
 	for _, p := range tc.pegs {
 		peg := p.(*pegCircle)
-		peg.X = float64(width) / domainSize.Width
-		peg.Y = float64(height) / domainSize.Height
+		peg.X *= float64(tc.hiddenCanvasContext.Width()) / domainSize.Width
+		peg.Y *= float64(tc.hiddenCanvasContext.Width()) / domainSize.Height
 	}
 
 	return tc.pegs
 }
 
 func (tc *ThreadComputer) computeSegmentPotential(peg1, peg2 Peg) float64 {
+	tc.uploadCanvasDataToCPU()
 	var potential float64 = 0
 
 	segmentLength := common.Distance(common.Point{
