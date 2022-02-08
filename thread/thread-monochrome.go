@@ -46,3 +46,7 @@ func (tm *ThreadMonochrome) EnableSamplingFor(color plotter.EColor) {
 func (tm *ThreadMonochrome) SampleCanvas(data []uint8, index int) uint8 {
 	return data[index+0] // only check the red channel because the hidden canvas is in black and white
 }
+
+func (tm *ThreadMonochrome) IterateOnThreads(nbSegmentsToIgnore int, callback ThreadsIterator) {
+	tm.IterateOnThread(tm.threadPegs, plotter.MONOCHROME, nbSegmentsToIgnore, callback)
+}

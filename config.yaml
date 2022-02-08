@@ -1,3 +1,5 @@
 PegsCount: 200
 LineNumber: 1000
 Quality: 3
+SourceImage: "/Users/zengqiang/codespace/threading/cat.jpg"
+DisplayPegs: true

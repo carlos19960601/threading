@@ -33,8 +33,7 @@ func init() {
 const MAX_COMPUTING_TIME_PER_FRAME = 20 // ms
 
 func main() {
-
-	file, err := os.OpenFile("./cat.jpg", os.O_RDONLY, os.ModePerm)
+	file, err := os.OpenFile(config.SourceImage, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		log.Fatalf("open file failed, err: %v", err)
 	}
@@ -51,4 +50,5 @@ func main() {
 	for threadComputer.ComputeNextSegments(MAX_COMPUTING_TIME_PER_FRAME) {
 		threadPlotter.Plot()
 	}
+	threadPlotter.Plotter.Finalize()
 }

@@ -2,7 +2,10 @@ package thread
 
 import (
 	"image"
+	"image/png"
+	"log"
 	"math"
+	"os"
 	"time"
 
 	"github.com/zengqiang96/threading/common"
@@ -63,6 +66,7 @@ type ThreadComputer struct {
 	lineOpacityInternal float64
 	lineThickness       int
 	arePegsTooClose     func(peg1, peg2 interface{}) bool
+	canvasBackend       *softwarebackend.SoftwareBackend
 	hiddenCanvasData    *image.RGBA
 	hiddenCanvasContext *canvas.Canvas
 	hiddenCanvasScale   int
@@ -91,10 +95,12 @@ func (tc *ThreadComputer) reset(opacity float64, lineThickness int) {
 func (tc *ThreadComputer) resetHiddenCanvas() {
 	wantedSize := computeBestSize(tc.SourceImage, 100*tc.hiddenCanvasScale)
 	backend := softwarebackend.New(int(wantedSize.Width), int(wantedSize.Height))
+	tc.canvasBackend = backend
 	tc.hiddenCanvasContext = canvas.New(backend)
 
-	tc.hiddenCanvasContext.DrawImage(tc.SourceImage, 0, 0, wantedSize.Width, wantedSize.Height)
+	log.Printf("canvas width: %f, height: %f", wantedSize.Width, wantedSize.Height)
 
+	tc.hiddenCanvasContext.DrawImage(tc.SourceImage, 0, 0, wantedSize.Width, wantedSize.Height)
 	imageData := tc.hiddenCanvasContext.GetImageData(0, 0, int(wantedSize.Width), int(wantedSize.Height))
 	tc.thread.adjustCanvasData(imageData.Pix)
 	tc.hiddenCanvasContext.PutImageData(imageData, 0, 0)
@@ -212,7 +218,23 @@ func (tc *ThreadComputer) computeBestStartingSegment() Segment {
 }
 
 func (tc *ThreadComputer) drawThread(p plotter.Plotter, segmentsToIgnoreNumber int) {
+	transformation := tc.computeTransformation(p.Size())
+	lineWidth := (transformation.Scaling * float64(tc.hiddenCanvasScale)) * float64(tc.lineThickness)
+	tc.thread.IterateOnThreads(segmentsToIgnoreNumber, func(thread []Peg, color plotter.EColor) {
+		points := make([]common.Point, 0)
+		for _, p := range thread {
+			points = append(points, transformation.Transform(common.Point{
+				X: p.GetX(),
+				Y: p.GetY(),
+			}))
+		}
 
+		p.DrawBrokenLine(points, color, tc.lineOpacity, lineWidth)
+	})
+}
+
+func (tc *ThreadComputer) computeTransformation(targetSize common.Size) *Transformation {
+	return NewTransformation(targetSize, tc.hiddenCanvasContext)
 }
 
 func (tc *ThreadComputer) computePegs() []Peg {
@@ -269,7 +291,7 @@ func (tc *ThreadComputer) computePegs() []Peg {
 	for _, p := range tc.pegs {
 		peg := p.(*pegCircle)
 		peg.X *= float64(tc.hiddenCanvasContext.Width()) / domainSize.Width
-		peg.Y *= float64(tc.hiddenCanvasContext.Width()) / domainSize.Height
+		peg.Y *= float64(tc.hiddenCanvasContext.Height()) / domainSize.Height
 	}
 
 	return tc.pegs
@@ -350,6 +372,7 @@ func randomPeg(candidates []Peg) Peg {
 	return candidates[int(randomIndex)]
 }
 
+// 通过Quality，确定canvas的size
 func computeBestSize(sourceImage image.Image, maxSize int) common.Size {
 	maxSourceSide := sourceImage.Bounds().Size().X
 	if sourceImage.Bounds().Size().Y > maxSourceSide {
@@ -370,4 +393,30 @@ func clamp(x, min, max int) int {
 	}
 
 	return x
+}
+
+func (tc *ThreadComputer) OutputCanvas() {
+	f, err := os.OpenFile("./result.png", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
+	if err != nil {
+		panic(err)
+	}
+	err = png.Encode(f, tc.canvasBackend.Image)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (tc *ThreadComputer) DrawPegs(p plotter.Plotter) {
+	transformation := tc.computeTransformation(p.Size())
+	pointSize := 0.5 * (transformation.Scaling * float64(tc.hiddenCanvasScale))
+
+	points := make([]common.Point, 0)
+	for _, p := range tc.pegs {
+		points = append(points, transformation.Transform(common.Point{
+			X: p.GetX(),
+			Y: p.GetY(),
+		}))
+	}
+
+	p.DrawPoints(points, "red", pointSize)
 }

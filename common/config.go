@@ -1,7 +1,9 @@
 package common
 
 type Config struct {
-	LineNumber int
-	PegsCount  int
-	Quality    int
+	SourceImage string
+	LineNumber  int
+	PegsCount   int
+	Quality     int
+	DisplayPegs bool
 }
