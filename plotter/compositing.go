@@ -1,5 +1,11 @@
 package plotter
 
+import (
+	"math"
+
+	"github.com/tfriedel6/canvas"
+)
+
 type EColor int
 
 const (
@@ -35,4 +41,12 @@ func computeRawColor(color EColor) Color {
 		g: g,
 		b: b,
 	}
+}
+
+func ApplyCanvasCompositing(context *canvas.Canvas, color EColor, opacity float64) {
+	rawColor := computeRawColor(color)
+	value := int(math.Ceil(255 * opacity))
+	// log.Printf("hidden canvas stroke style, r: %d, g: %d, b: %d", rawColor.r*value, rawColor.g*value, rawColor.b*value)
+	context.SetStrokeStyle(rawColor.r*value, rawColor.g*value, rawColor.b*value)
+	// context.SetStrokeStyle(255, 255, 255)
 }

@@ -12,7 +12,7 @@ type Thread2Grow struct {
 type ThreadsIterator func(thread []Peg, color plotter.EColor)
 
 type Thread interface {
-	adjustCanvasData(data []uint8)
+	AdjustCanvasData(data []uint8)
 	GetTotalSegmentNumber() int
 	GetThread2Grow() Thread2Grow
 	EnableSamplingFor(color plotter.EColor)

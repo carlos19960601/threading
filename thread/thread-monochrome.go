@@ -24,7 +24,7 @@ func (tm *ThreadMonochrome) GetThread2Grow() Thread2Grow {
 	}
 }
 
-func (tm *ThreadMonochrome) adjustCanvasData(data []uint8) {
+func (tm *ThreadMonochrome) AdjustCanvasData(data []uint8) {
 	computeAdjustedValue := func(rawValue uint8) uint8 {
 		return rawValue / 2
 	}

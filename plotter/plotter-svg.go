@@ -3,6 +3,7 @@ package plotter
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 
 	svg "github.com/ajstarks/svgo/float"
@@ -23,9 +24,11 @@ func (ps *PlotterSVG) DrawLines(lines []common.Line, color EColor, opacity float
 		return
 	}
 
+	value := int(math.Ceil(255 * opacity))
 	rawRGB := computeRawColor(color)
-	strokeColor := fmt.Sprintf("rgba(%d, %d, %d, %f)", rawRGB.r*0, rawRGB.g*0, rawRGB.b*0, opacity)
-	ps.writer.Group(fmt.Sprintf(`stroke:%s; stroke-width:%f; stroke-linecap:round; fill:none`, strokeColor, thickness))
+	strokeColor := fmt.Sprintf("rgb(%d, %d, %d)", rawRGB.r*value, rawRGB.g*value, rawRGB.b*value)
+	strokeColor = fmt.Sprintf("rgb(%d, %d, %d)", 8, 8, 8)
+	ps.writer.Group(fmt.Sprintf(`stroke:%s; stroke-width:%f; stroke-linecap:round; fill:none`, strokeColor, 5.0))
 	for _, line := range lines {
 		ps.writer.Line(line.From.X, line.From.Y, line.To.X, line.To.Y)
 	}

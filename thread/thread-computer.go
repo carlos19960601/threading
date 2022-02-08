@@ -24,6 +24,7 @@ const (
 type Peg interface {
 	GetX() float64
 	GetY() float64
+	Index() int
 }
 
 type peg struct {
@@ -47,6 +48,7 @@ type Segment struct {
 type pegCircle struct {
 	peg
 	angle float64
+	index int
 }
 
 func (pc *pegCircle) GetX() float64 {
@@ -55,6 +57,10 @@ func (pc *pegCircle) GetX() float64 {
 
 func (pc *pegCircle) GetY() float64 {
 	return pc.peg.Y
+}
+
+func (pc *pegCircle) Index() int {
+	return pc.index
 }
 
 type ThreadComputer struct {
@@ -98,11 +104,9 @@ func (tc *ThreadComputer) resetHiddenCanvas() {
 	tc.canvasBackend = backend
 	tc.hiddenCanvasContext = canvas.New(backend)
 
-	log.Printf("canvas width: %f, height: %f", wantedSize.Width, wantedSize.Height)
-
 	tc.hiddenCanvasContext.DrawImage(tc.SourceImage, 0, 0, wantedSize.Width, wantedSize.Height)
 	imageData := tc.hiddenCanvasContext.GetImageData(0, 0, int(wantedSize.Width), int(wantedSize.Height))
-	tc.thread.adjustCanvasData(imageData.Pix)
+	tc.thread.AdjustCanvasData(imageData.Pix)
 	tc.hiddenCanvasContext.PutImageData(imageData, 0, 0)
 	tc.computeError()
 	tc.initializeHiddenCanvasLineProperties()
@@ -121,19 +125,30 @@ func (tc *ThreadComputer) uploadCanvasDataToCPU() {
 }
 
 func (tc *ThreadComputer) initializeHiddenCanvasLineProperties() {
+	theoricalThickness := tc.lineThickness * tc.hiddenCanvasScale
+	if theoricalThickness <= 1 {
 
+	} else {
+		tc.lineOpacityInternal = 0.5 * tc.lineOpacity
+		tc.hiddenCanvasContext.SetLineWidth(float64(theoricalThickness))
+	}
 }
 
 func (tc *ThreadComputer) ComputeNextSegments(maxMsTaken int64) bool {
-
 	start := time.Now()
 	targetSegmentNumber := tc.Config.LineNumber
 	if tc.GetSegmentsNumber() == targetSegmentNumber {
 		return false
 	}
 
+	var lastColor plotter.EColor = -1
 	for tc.GetSegmentsNumber() < targetSegmentNumber && time.Since(start).Milliseconds() < maxMsTaken {
 		thread2Grow := tc.thread.GetThread2Grow()
+		if lastColor != thread2Grow.color {
+			plotter.ApplyCanvasCompositing(tc.hiddenCanvasContext, thread2Grow.color, tc.lineOpacityInternal)
+			tc.thread.EnableSamplingFor(thread2Grow.color)
+			lastColor = thread2Grow.color
+		}
 		tc.computeSegment(thread2Grow.thread)
 	}
 	return true
@@ -160,6 +175,7 @@ func (tc *ThreadComputer) computeSegment(thread *[]Peg) {
 	}
 
 	*thread = append(*thread, nextPeg)
+	log.Printf("drawn on hidden canvas, peg1: %+v, peg2: %+v\n", lastPeg.Index(), nextPeg.Index())
 	tc.drawSegmentOnHiddenCanvas(lastPeg, nextPeg)
 }
 
@@ -169,6 +185,8 @@ func (tc *ThreadComputer) drawSegmentOnHiddenCanvas(peg1, peg2 Peg) {
 	tc.hiddenCanvasContext.LineTo(peg2.GetX(), peg2.GetY())
 	tc.hiddenCanvasContext.Stroke()
 	tc.hiddenCanvasContext.ClosePath()
+
+	tc.OutputCanvas()
 	// invalidate CPU data
 	tc.hiddenCanvasData = nil
 }
@@ -288,10 +306,11 @@ func (tc *ThreadComputer) computePegs() []Peg {
 		angle += deltaAngle
 	}
 
-	for _, p := range tc.pegs {
+	for index, p := range tc.pegs {
 		peg := p.(*pegCircle)
 		peg.X *= float64(tc.hiddenCanvasContext.Width()) / domainSize.Width
 		peg.Y *= float64(tc.hiddenCanvasContext.Height()) / domainSize.Height
+		peg.index = index
 	}
 
 	return tc.pegs
