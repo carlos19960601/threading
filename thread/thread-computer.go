@@ -3,7 +3,6 @@ package thread
 import (
 	"image"
 	"image/png"
-	"log"
 	"math"
 	"os"
 	"time"
@@ -70,7 +69,7 @@ type ThreadComputer struct {
 	thread              Thread
 	lineOpacity         float64
 	lineOpacityInternal float64
-	lineThickness       int
+	lineThickness       float64
 	arePegsTooClose     func(peg1, peg2 interface{}) bool
 	canvasBackend       *softwarebackend.SoftwareBackend
 	hiddenCanvasData    *image.RGBA
@@ -85,11 +84,11 @@ func NewThreadComputer(sourceImage image.Image, config common.Config) *ThreadCom
 		hiddenCanvasScale: config.Quality,
 	}
 
-	tc.reset(float64(16)/256, 1)
+	tc.Reset(math.Pow(2, float64(config.LinesOpacity-7)), config.LinesThickness)
 	return tc
 }
 
-func (tc *ThreadComputer) reset(opacity float64, lineThickness int) {
+func (tc *ThreadComputer) Reset(opacity float64, lineThickness float64) {
 	tc.lineOpacity = opacity
 	tc.lineThickness = lineThickness
 
@@ -125,12 +124,13 @@ func (tc *ThreadComputer) uploadCanvasDataToCPU() {
 }
 
 func (tc *ThreadComputer) initializeHiddenCanvasLineProperties() {
-	theoricalThickness := tc.lineThickness * tc.hiddenCanvasScale
+	theoricalThickness := tc.lineThickness * float64(tc.hiddenCanvasScale)
 	if theoricalThickness <= 1 {
-
+		tc.lineOpacityInternal = 0.5 * tc.lineOpacity * theoricalThickness
+		tc.hiddenCanvasContext.SetLineWidth(1)
 	} else {
 		tc.lineOpacityInternal = 0.5 * tc.lineOpacity
-		tc.hiddenCanvasContext.SetLineWidth(float64(theoricalThickness))
+		tc.hiddenCanvasContext.SetLineWidth(theoricalThickness)
 	}
 }
 
@@ -175,7 +175,6 @@ func (tc *ThreadComputer) computeSegment(thread *[]Peg) {
 	}
 
 	*thread = append(*thread, nextPeg)
-	log.Printf("drawn on hidden canvas, peg1: %+v, peg2: %+v\n", lastPeg.Index(), nextPeg.Index())
 	tc.drawSegmentOnHiddenCanvas(lastPeg, nextPeg)
 }
 
@@ -228,7 +227,6 @@ func (tc *ThreadComputer) computeBestStartingSegment() Segment {
 					candidates = append(candidates, Segment{peg1: peg1, peg2: peg2})
 				}
 			}
-
 		}
 	}
 
@@ -431,10 +429,11 @@ func (tc *ThreadComputer) DrawPegs(p plotter.Plotter) {
 
 	points := make([]common.Point, 0)
 	for _, p := range tc.pegs {
-		points = append(points, transformation.Transform(common.Point{
+		point := transformation.Transform(common.Point{
 			X: p.GetX(),
 			Y: p.GetY(),
-		}))
+		})
+		points = append(points, point)
 	}
 
 	p.DrawPoints(points, "red", pointSize)
