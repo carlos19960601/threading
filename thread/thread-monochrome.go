@@ -25,17 +25,17 @@ func (tm *ThreadMonochrome) GetThread2Grow() Thread2Grow {
 }
 
 func (tm *ThreadMonochrome) AdjustCanvasData(data []uint8) {
-	computeAdjustedValue := func(rawValue uint8) uint8 {
+	computeAdjustedValue := func(rawValue float64) float64 {
 		return rawValue / 2
 	}
 
 	nbPixels := len(data) / 4
 	for i := 0; i < nbPixels; i++ {
-		averageSourceValue := (data[4*i+0] + data[4*i+1] + data[4*i+2]) / 3
+		averageSourceValue := float64(int(data[4*i+0])+int(data[4*i+1])+int(data[4*i+2])) / 3
 		adjustedValue := computeAdjustedValue(averageSourceValue)
-		data[4*i+0] = adjustedValue
-		data[4*i+1] = adjustedValue
-		data[4*i+2] = adjustedValue
+		data[4*i+0] = uint8(adjustedValue)
+		data[4*i+1] = uint8(adjustedValue)
+		data[4*i+2] = uint8(adjustedValue)
 	}
 }
 
