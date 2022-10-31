@@ -1,7 +1,7 @@
 PegsCount: 200
 LineNumber: 1000
 Quality: 3
-SourceImage: "/Users/zengqiang96/codespace/threading/cat.jpg"
+SourceImage: "/Users/zengqiang/codespace/threading/cat.jpg"
 DisplayPegs: true
 LinesOpacity: 2
 LinesThickness: 0.5

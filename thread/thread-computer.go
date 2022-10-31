@@ -151,6 +151,7 @@ func (tc *ThreadComputer) ComputeNextSegments(maxMsTaken int64) bool {
 		}
 		tc.computeSegment(thread2Grow.thread)
 	}
+
 	return true
 }
 
